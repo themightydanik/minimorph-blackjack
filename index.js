@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minimorph Blackjack - The Agora Deck</title>
+    <link rel="icon" type="image/png" href="icon.png">
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <script type="text/javascript" src="mds.js"></script>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="screen active">
+        <div class="neon-border">
+            <div class="loading-content">
+                <h1 class="neon-text">MINIMORPH BLACKJACK</h1>
+                <div class="loading-spinner"></div>
+                <p class="loading-text">Connecting to Minima Network...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Transaction Indicator -->
+    <div id="transaction-indicator" class="transaction-indicator">
+        <div class="tx-spinner"></div>
+        <div class="tx-text">Processing transaction...</div>
+    </div>
+
+    <!-- Main Menu -->
+    <div id="main-menu" class="screen">
+        <div class="background-stars"></div>
+        <div class="menu-container">
+            <h1 class="title neon-text">THE AGORA DECK</h1>
+            <p class="subtitle">Minimorph Blackjack Casino</p>
+            
+            <div class="player-info">
+                <div class="info-card">
+                    <span class="label">Balance:</span>
+                    <span id="player-balance" class="value">0 Minima</span>
+                </div>
+                <div class="info-card">
+                    <span class="label">Points:</span>
+                    <span id="player-points" class="value">0</span>
+                </div>
+                <div class="info-card">
+                    <span class="label">Level:</span>
+                    <span id="player-level" class="value">1</span>
+                </div>
+            </div>
+
+            <div class="menu-buttons">
+                <button class="menu-btn primary" onclick="showGameSetup('solo')">
+                    <span class="btn-icon">🤖</span>
+                    <span>Play vs AI</span>
+                </button>
+                <button class="menu-btn primary" onclick="showGameSetup('pvp')">
+                    <span class="btn-icon">👥</span>
+                    <span>Play vs Player</span>
+                </button>
+                <button class="menu-btn secondary" onclick="showScreen('profile')">
+                    <span class="btn-icon">📊</span>
+                    <span>Profile & Stats</span>
+                </button>
+                <button class="menu-btn secondary" onclick="showScreen('customize')">
+                    <span class="btn-icon">🎨</span>
+                    <span>Customize</span>
+                </button>
+                <button class="menu-btn secondary" onclick="showScreen('leaderboard')">
+                    <span class="btn-icon">🏆</span>
+                    <span>Leaderboard</span>
+                </button>
+                <button class="menu-btn secondary" onclick="showScreen('settings')">
+                    <span class="btn-icon">⚙️</span>
+                    <span>Settings</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Setup Screen -->
+    <div id="game-setup" class="screen">
+        <div class="setup-container">
+            <button class="back-btn" onclick="showScreen('main-menu')">← Back</button>
+            
+            <h2 class="screen-title" id="setup-title">Game Setup</h2>
+            
+            <div class="setup-options">
+                <div class="option-group">
+                    <label>Game Mode:</label>
+                    <div class="mode-toggle">
+                        <button class="toggle-btn active" id="mode-fun" onclick="setGameMode('fun')">
+                            For Fun
+                        </button>
+                        <button class="toggle-btn" id="mode-stake" onclick="setGameMode('stake')">
+                            With Stakes
+                        </button>
+                    </div>
+                </div>
+
+                <div class="option-group" id="bet-options" style="display: none;">
+                    <label>Bet Amount (Minima):</label>
+                    <div class="bet-input-group">
+                        <input type="number" id="bet-amount" value="1" min="0.1" step="0.1" class="bet-input">
+                        <div class="quick-bets">
+                            <button class="quick-bet" onclick="setBet(1)">1</button>
+                            <button class="quick-bet" onclick="setBet(5)">5</button>
+                            <button class="quick-bet" onclick="setBet(10)">10</button>
+                            <button class="quick-bet" onclick="setBet(50)">50</button>
+                        </div>
+                    </div>
+                    <p class="bet-note">Available: <span id="available-balance">0</span> Minima</p>
+                </div>
+
+                <div class="option-group" id="dealer-select">
+                    <label>Select Dealer:</label>
+                    <div class="dealer-grid">
+                        <div class="dealer-card active" data-dealer="friendly" onclick="selectDealer('friendly')">
+                            <div class="dealer-avatar">😊</div>
+                            <p class="dealer-name">Friendly</p>
+                        </div>
+                        <div class="dealer-card" data-dealer="sarcastic" onclick="selectDealer('sarcastic')">
+                            <div class="dealer-avatar">😏</div>
+                            <p class="dealer-name">Sarcastic</p>
+                        </div>
+                        <div class="dealer-card" data-dealer="cold" onclick="selectDealer('cold')">
+                            <div class="dealer-avatar">😐</div>
+                            <p class="dealer-name">Cold</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button class="start-game-btn" onclick="startGame()">
+                <span>Start Game</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Game Screen -->
+    <div id="game-screen" class="screen">
+        <div class="game-container">
+            <!-- Game Header -->
+            <div class="game-header">
+                <button class="exit-btn" onclick="exitGame()">✕ Exit</button>
+                <div class="game-info">
+                    <span class="bet-display">Bet: <span id="current-bet">0</span> Minima</span>
+                    <span class="balance-display">Balance: <span id="game-balance">0</span></span>
+                </div>
+            </div>
+
+            <!-- Dealer Section -->
+            <div class="dealer-section">
+                <div class="dealer-avatar-container">
+                    <div id="dealer-avatar" class="dealer-minimorph"></div>
+                    <div class="dealer-speech-bubble" id="dealer-speech"></div>
+                </div>
+                <div class="hand-info">
+                    <span class="hand-label">Dealer</span>
+                    <span class="hand-value" id="dealer-value">0</span>
+                </div>
+                <div class="cards-container" id="dealer-cards"></div>
+            </div>
+
+            <!-- Game Table -->
+            <div class="game-table">
+                <canvas id="game-canvas" width="800" height="400"></canvas>
+            </div>
+
+            <!-- Player Section -->
+            <div class="player-section">
+                <div class="cards-container" id="player-cards"></div>
+                <div class="hand-info">
+                    <span class="hand-label">You</span>
+                    <span class="hand-value" id="player-value">0</span>
+                </div>
+            </div>
+
+            <!-- Game Controls -->
+            <div class="game-controls">
+                <button class="game-btn hit" id="btn-hit" onclick="playerHit()">
+                    <span>Hit</span>
+                </button>
+                <button class="game-btn stand" id="btn-stand" onclick="playerStand()">
+                    <span>Stand</span>
+                </button>
+                <button class="game-btn double" id="btn-double" onclick="playerDouble()">
+                    <span>Double</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Result Modal -->
+    <div id="result-modal" class="modal">
+        <div class="modal-content result-content">
+            <h2 class="result-title" id="result-title">You Win!</h2>
+            <div class="result-details">
+                <p class="result-amount" id="result-amount">+10 Minima</p>
+                <p class="result-rewards">
+                    <span class="reward-item">+<span id="result-xp">30</span> XP</span>
+                    <span class="reward-item">+<span id="result-points">15</span> Points</span>
+                </p>
+            </div>
+            <div class="result-actions">
+                <button class="modal-btn primary" onclick="playAgain()">Play Again</button>
+                <button class="modal-btn secondary" onclick="exitToMenu()">Main Menu</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Profile Screen -->
+    <div id="profile" class="screen">
+        <div class="profile-container">
+            <button class="back-btn" onclick="showScreen('main-menu')">← Back</button>
+            
+            <h2 class="screen-title">Player Profile</h2>
+            
+            <div class="profile-stats">
+                <div class="stat-card large">
+                    <div class="stat-icon">⭐</div>
+                    <div class="stat-info">
+                        <span class="stat-label">Level</span>
+                        <span class="stat-value" id="profile-level">1</span>
+                    </div>
+                    <div class="xp-bar">
+                        <div class="xp-progress" id="xp-progress" style="width: 0%"></div>
+                    </div>
+                    <span class="xp-text"><span id="profile-xp">0</span> / 1000 XP</span>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <span class="stat-label">Total Games</span>
+                        <span class="stat-value" id="profile-games">0</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-label">Wins</span>
+                        <span class="stat-value win-color" id="profile-wins">0</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-label">Losses</span>
+                        <span class="stat-value loss-color" id="profile-losses">0</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-label">Win Rate</span>
+                        <span class="stat-value" id="profile-winrate">0%</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-label">Blackjacks</span>
+                        <span class="stat-value gold-color" id="profile-blackjacks">0</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-label">Points</span>
+                        <span class="stat-value" id="profile-points">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="game-history">
+                <h3 class="section-title">Recent Games</h3>
+                <div id="history-list" class="history-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaderboard Screen -->
+    <div id="leaderboard" class="screen">
+        <div class="leaderboard-container">
+            <button class="back-btn" onclick="showScreen('main-menu')">← Back</button>
+            
+            <h2 class="screen-title">Leaderboard</h2>
+            
+            <div class="leaderboard-list" id="leaderboard-list"></div>
+        </div>
+    </div>
+
+    <!-- Settings Screen -->
+    <div id="settings" class="screen">
+        <div class="settings-container">
+            <button class="back-btn" onclick="showScreen('main-menu')">← Back</button>
+            
+            <h2 class="screen-title">Settings</h2>
+            
+            <div class="settings-options">
+                <div class="setting-item">
+                    <label>Sound Effects</label>
+                    <label class="switch">
+                        <input type="checkbox" id="sound-toggle" checked onchange="toggleSound()">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                
+                <div class="setting-item">
+                    <label>Music</label>
+                    <label class="switch">
+                        <input type="checkbox" id="music-toggle" checked onchange="toggleMusic()">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <div class="setting-item">
+                    <label>Table Theme</label>
+                    <select id="theme-select" class="theme-select" onchange="changeTheme()">
+                        <option value="neon">Neon Blue</option>
+                        <option value="purple">Purple Haze</option>
+                        <option value="green">Matrix Green</option>
+                        <option value="red">Cyber Red</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Customize Screen -->
+    <div id="customize" class="screen">
+        <div class="customize-container">
+            <button class="back-btn" onclick="showScreen('main-menu')">← Back</button>
+            
+            <h2 class="screen-title">Customize</h2>
+            
+            <div class="customize-sections">
+                <div class="customize-section">
+                    <h3>NFT Dealers</h3>
+                    <p class="section-note">Purchase unique Minimorph dealers</p>
+                    <div class="nft-grid" id="nft-dealers"></div>
+                </div>
+
+                <div class="customize-section">
+                    <h3>Card Skins</h3>
+                    <p class="section-note">Unlock special card designs</p>
+                    <div class="nft-grid" id="card-skins"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="assets/js/game.js"></script>
+    <script src="assets/js/blockchain.js"></script>
+    <script src="assets/js/database.js"></script>
+    <script src="assets/js/ui.js"></script>
+    <script src="assets/js/dealer-ai.js"></script>
+    <script src="assets/js/app.js"></script>
+</body>
+</html>
