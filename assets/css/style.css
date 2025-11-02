@@ -24,6 +24,22 @@ body {
   color: var(--neon-blue);
   overflow: hidden;
   min-height: 100vh;
+  position: relative;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: url('./assets/images/backgrounds/stars-bg.png');
+  background-size: cover;
+  background-position: center;
+  opacity: 0.3;
+  z-index: -1;
+  pointer-events: none;
 }
 
 /* Screens */
@@ -425,6 +441,27 @@ body {
   background: linear-gradient(135deg, var(--cyber-darker) 0%, var(--cyber-dark) 50%, var(--cyber-darker) 100%);
   display: flex;
   flex-direction: column;
+  position: relative;
+}
+
+.game-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: url('./assets/images/backgrounds/casino-bg.jpg');
+  background-size: cover;
+  background-position: center;
+  opacity: 0.2;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.game-container > * {
+  position: relative;
+  z-index: 1;
 }
 
 .game-header {
@@ -565,12 +602,33 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+}
+
+.game-table::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 90%;
+  max-width: 900px;
+  height: 70%;
+  background-image: url('./assets/images/backgrounds/table-bg.jpg');
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 0.5;
+  border-radius: 50%;
+  z-index: 0;
 }
 
 #game-canvas {
   border: 2px solid var(--neon-blue);
   border-radius: 12px;
   box-shadow: 0 0 30px rgba(0, 243, 255, 0.3);
+  position: relative;
+  z-index: 1;
 }
 
 .player-section {
