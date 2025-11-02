@@ -49,7 +49,16 @@ class UIManager {
     
     if (hidden) {
       cardEl.classList.add('hidden');
-      cardEl.innerHTML = '<span>?</span>';
+      
+      // Попробовать загрузить изображение рубашки
+      const backImg = new Image();
+      backImg.src = './assets/images/cards/back.png';
+      backImg.onload = () => {
+        cardEl.innerHTML = `<img src="${backImg.src}" alt="Card back" style="width: 100%; height: 100%; object-fit: cover; border-radius: 6px;">`;
+      };
+      backImg.onerror = () => {
+        cardEl.innerHTML = '<span>?</span>';
+      };
     } else {
       const suitSymbol = {
         'hearts': '♥',
@@ -58,14 +67,30 @@ class UIManager {
         'spades': '♠'
       };
       
-      cardEl.innerHTML = `
-        <span style="font-size: 14px; position: absolute; top: 5px; left: 8px;">${card.value}</span>
-        <span style="font-size: 32px;">${suitSymbol[card.suit]}</span>
-        <span style="font-size: 14px; position: absolute; bottom: 5px; right: 8px;">${card.value}</span>
-      `;
+      // Попробовать загрузить изображение карты
+      const cardImg = new Image();
+      cardImg.src = `./assets/images/cards/${card.suit}/${card.value}.png`;
+      
+      cardImg.onload = () => {
+        cardEl.innerHTML = `<img src="${cardImg.src}" alt="${card.value} of ${card.suit}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 6px;">`;
+      };
+      
+      cardImg.onerror = () => {
+        // Fallback к тексту если изображение не загрузилось
+        cardEl.innerHTML = `
+          <span style="font-size: 14px; position: absolute; top: 5px; left: 8px;">${card.value}</span>
+          <span style="font-size: 32px;">${suitSymbol[card.suit]}</span>
+          <span style="font-size: 14px; position: absolute; bottom: 5px; right: 8px;">${card.value}</span>
+        `;
+      };
     }
     
     container.appendChild(cardEl);
+    
+    // Воспроизвести звук раздачи карты
+    if (window.soundManager) {
+      window.soundManager.playCardDeal();
+    }
   }
 
   // Отрисовать руку
