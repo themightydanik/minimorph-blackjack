@@ -324,25 +324,115 @@ class MinimaGameManager {
     });
   }
 
-  // Выплата выигрыша игроку (автоматическая транзакция)
-  async payoutBotGame(winAmount) {
+  // Выплата выигрыша игроку (РЕАЛЬНАЯ транзакция с House кошелька)
+  async payoutBotGame(playerAddress, winAmount) {
     return new Promise((resolve) => {
-      // Для игры с ботом выплата происходит автоматически
-      // так как игрок уже "сжег" свою ставку в первой транзакции
-      // Теперь система (House) должна отправить выплату
+      const HOUSE_ADDRESS = "MxG080G6W4B38NQ5RBC35YWFCDKDJ71GMC8GDYRJ101Y3EF49UD1QPGE254T2ZV";
       
-      // В реальной реализации нужен House wallet
-      // который будет отправлять выигрыши
+      console.log(`Paying out ${winAmount} Minima to ${playerAddress} from House wallet`);
       
-      // Для демо-версии просто возвращаем статус
-      console.log(`Payout of ${winAmount} Minima would be sent to player`);
+      // Создаем транзакцию выплаты
+      const payoutTxnId = `payout_${Date.now()}`;
       
-      resolve({
-        status: "payout_success",
-        amount: winAmount,
-        note: "In production, House wallet would send this amount"
+      MDS.cmd(`txncreate id:${payoutTxnId}`, (res1) => {
+        if (!res1.status) {
+          console.error("Failed to create payout transaction");
+          return resolve({ status: "error", message: "Failed to create transaction" });
+        }
+
+        // Находим монету House для выплаты
+        MDS.cmd("coins relevant:true", (res2) => {
+          if (!res2.status) {
+            console.error("Failed to get House coins");
+            return resolve({ status: "error", message: "No coins available" });
+          }
+
+          const houseCoin = res2.response.find(
+            c => parseFloat(c.amount) >= winAmount && c.tokenid === "0x00"
+          );
+          
+          if (!houseCoin) {
+            console.error("Insufficient House funds for payout");
+            return resolve({ 
+              status: "insufficient_house_funds", 
+              required: winAmount,
+              message: "House wallet needs to be funded"
+            });
+          }
+
+          // Добавляем вход от House
+          MDS.cmd(`txninput id:${payoutTxnId} coinid:${houseCoin.coinid}`, (res3) => {
+            if (!res3.status) {
+              return resolve({ status: "error", message: "Failed to add input" });
+            }
+
+            // Добавляем выплату игроку
+            MDS.cmd(`txnoutput id:${payoutTxnId} address:${playerAddress} amount:${winAmount}`, (res4) => {
+              if (!res4.status) {
+                return resolve({ status: "error", message: "Failed to add output" });
+              }
+
+              // Добавляем сдачу обратно в House
+              const change = parseFloat(houseCoin.amount) - winAmount;
+              if (change > 0.000001) {
+                MDS.cmd("getaddress", (res5) => {
+                  const houseChangeAddress = res5.response.miniaddress;
+                  
+                  MDS.cmd(`txnoutput id:${payoutTxnId} address:${houseChangeAddress} amount:${change}`, (res6) => {
+                    this.finalizePayoutTxn(payoutTxnId, winAmount, resolve);
+                  });
+                });
+              } else {
+                this.finalizePayoutTxn(payoutTxnId, winAmount, resolve);
+              }
+            });
+          });
+        });
       });
     });
+  }
+
+  // Финализировать транзакцию выплаты
+  finalizePayoutTxn(txnId, amount, resolve) {
+    MDS.cmd(`txnsign id:${txnId} publickey:auto`, (res7) => {
+      if (!res7.status) {
+        return resolve({ status: "error", message: "Failed to sign" });
+      }
+
+      MDS.cmd(`txnbasics id:${txnId}`, (res8) => {
+        if (!res8.status) {
+          return resolve({ status: "error", message: "Failed to add basics" });
+        }
+
+        MDS.cmd(`txnpost id:${txnId}`, (res9) => {
+          if (!res9.status) {
+            return resolve({ status: "error", message: "Failed to post" });
+          }
+
+          console.log("Payout transaction posted successfully");
+          resolve({
+            status: "payout_success",
+            amount: amount,
+            transactionId: res9.response?.txpowid || "pending"
+          });
+        });
+      });
+    });
+  }
+
+  // Отправить проигрыш на House адрес
+  async sendLossTоHouse(betAmount) {
+    // Проигрыш уже был списан в createBotStake()
+    // Эти деньги автоматически "сгорели" при создании транзакции
+    // Если нужно явно отправить на House адрес - это уже сделано
+    
+    console.log(`Loss of ${betAmount} Minima - already burned/sent to House`);
+    
+    return {
+      status: "loss_processed",
+      amount: betAmount,
+      houseAddress: "MxG080G6W4B38NQ5RBC35YWFCDKDJ71GMC8GDYRJ101Y3EF49UD1QPGE254T2ZV"
+    };
   }
 
   // АЛЬТЕРНАТИВНЫЙ МЕТОД: Временная блокировка со смарт-контрактом
