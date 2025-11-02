@@ -415,6 +415,23 @@ class DealerAI {
     const style = this.getPersonalityStyle();
     avatar.style.borderColor = style.borderColor;
     avatar.style.boxShadow = `0 0 30px ${style.shadowColor}`;
+    
+    // Попробовать загрузить изображение дилера
+    const dealerImg = new Image();
+    dealerImg.src = `./assets/images/dealer/${this.personality}.png`;
+    
+    dealerImg.onload = () => {
+      avatar.style.backgroundImage = `url(${dealerImg.src})`;
+      avatar.style.backgroundSize = 'cover';
+      avatar.style.backgroundPosition = 'center';
+      avatar.textContent = ''; // Очистить emoji если изображение загрузилось
+    };
+    
+    dealerImg.onerror = () => {
+      // Fallback к emoji если изображение не найдено
+      const emotion = this.getEmotionEmoji('neutral');
+      avatar.textContent = emotion;
+    };
   }
 }
 
