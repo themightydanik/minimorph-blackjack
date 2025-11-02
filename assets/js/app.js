@@ -6,6 +6,7 @@ let game;
 let blockchain;
 let db;
 let dealer;
+let soundManager;
 let playerAddress;
 let playerBalance;
 let currentGameMode = 'solo';
@@ -38,6 +39,11 @@ function initApp() {
 // MDS готов
 async function onMDSReady() {
   try {
+    // Инициализация звуковой системы
+    soundManager = new SoundManager();
+    soundManager.init();
+    window.soundManager = soundManager;
+    
     // Инициализация базы данных
     db = new GameDatabase();
     await new Promise(resolve => db.init(resolve));
@@ -57,6 +63,17 @@ async function onMDSReady() {
     db.getOrCreateProfile(playerAddress, (profile) => {
       // Обновить UI
       ui.updatePlayerInfo(playerBalance, profile.points, profile.level);
+      
+      // Загрузить настройки
+      db.getPlayerSettings(playerAddress, (settings) => {
+        soundManager.toggleSFX(settings.soundEnabled !== false);
+        soundManager.toggleMusic(settings.musicEnabled !== false);
+        
+        // Начать фоновую музыку если включена
+        if (settings.musicEnabled !== false) {
+          soundManager.startMusic();
+        }
+      });
       
       // Показать главное меню
       setTimeout(() => {
@@ -367,6 +384,11 @@ async function handleBlackjack() {
   
   dealer.animateReaction('impressed');
   
+  // Звук блекджека
+  if (soundManager) {
+    soundManager.playBlackjack();
+  }
+  
   await new Promise(resolve => setTimeout(resolve, 2000));
   
   const gameState = game.getGameState();
@@ -415,31 +437,49 @@ async function handleGameEnd(gameState) {
     
     try {
       if (gameState.gameState === 'player_won' || gameState.gameState === 'player_blackjack') {
-        // Выплата выигрыша
+        // Выплата выигрыша - РЕАЛЬНАЯ транзакция от House
         console.log(`Player won ${payout} Minima`);
         
-        // Для демо: показываем что выплата отправлена
-        await blockchain.payoutBotGame(payout);
+        const payoutResult = await blockchain.payoutBotGame(playerAddress, payout);
         
-        ui.showTransactionIndicator(`Won ${payout} Minima! 🎉`, 'success');
+        if (payoutResult.status === "payout_success") {
+          ui.showTransactionIndicator(`Won ${payout} Minima! 🎉`, 'success');
+          
+          if (payoutResult.transactionId) {
+            ui.showBlockchainInfo(payoutResult.transactionId, 'Payout transaction confirmed');
+          }
+        } else if (payoutResult.status === "insufficient_house_funds") {
+          ui.showTransactionIndicator('⚠️ House wallet needs funding', 'error');
+          console.error('House wallet needs to be funded with at least', payoutResult.required, 'Minima');
+        } else {
+          ui.showTransactionIndicator('Payout failed: ' + payoutResult.message, 'error');
+        }
         
       } else if (gameState.gameState === 'push') {
-        // При ничьей возвращаем ставку
+        // При ничьей возвращаем ставку - РЕАЛЬНАЯ транзакция
         console.log('Push - returning bet');
-        netProfit = 0;
         
-        ui.showTransactionIndicator('Push - bet returned', 'success');
+        const returnResult = await blockchain.payoutBotGame(playerAddress, currentBetAmount);
+        
+        if (returnResult.status === "payout_success") {
+          netProfit = 0;
+          ui.showTransactionIndicator('Push - bet returned', 'success');
+        } else {
+          ui.showTransactionIndicator('Failed to return bet', 'error');
+        }
         
       } else {
-        // Проигрыш - ставка уже списана
-        console.log('Player lost - bet was burned');
+        // Проигрыш - ставка уже отправлена на House адрес
+        console.log('Player lost - bet sent to House wallet');
         netProfit = -currentBetAmount;
+        
+        await blockchain.sendLossTоHouse(currentBetAmount);
         
         ui.showTransactionIndicator(`Lost ${currentBetAmount} Minima`, 'error');
       }
       
       // Задержка для показа индикатора
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise(resolve => setTimeout(resolve, 3000));
       ui.hideTransactionIndicator();
       
       // Обновить баланс
@@ -574,6 +614,11 @@ function loadMainMenuData() {
 function toggleSound() {
   const toggle = document.getElementById('sound-toggle');
   const enabled = toggle ? toggle.checked : true;
+  
+  if (soundManager) {
+    soundManager.toggleSFX(enabled);
+  }
+  
   console.log("Sound:", enabled);
   
   if (db && playerAddress) {
@@ -587,6 +632,11 @@ function toggleSound() {
 function toggleMusic() {
   const toggle = document.getElementById('music-toggle');
   const enabled = toggle ? toggle.checked : true;
+  
+  if (soundManager) {
+    soundManager.toggleMusic(enabled);
+  }
+  
   console.log("Music:", enabled);
   
   if (db && playerAddress) {
